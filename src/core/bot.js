@@ -57,7 +57,7 @@ bot.start(async (ctx) => {
         inline_keyboard: [
           [
             {
-              text: "ℹ️ About GitHub platform",
+              text: "ℹ️ More information about GitHub",
               url: "https://docs.github.com/",
             },
           ],
@@ -77,13 +77,65 @@ bot.command("/stats", async (ctx) => {
   }
 });
 
+const updateStatistics = async (userId) => {
+  const today = new Date().toISOString().split("T")[0];
+
+  const stats = await StatsModel.findById(today);
+  if (!stats) {
+    await StatsModel.create({
+      _id: today,
+      totalRequests: 1,
+      uniqueUsers: [userId],
+    });
+  } else {
+    stats.totalRequests += 1;
+
+    if (!stats.uniqueUsers.includes(userId)) {
+      stats.uniqueUsers.push(userId);
+    }
+
+    await stats.save();
+  }
+};
+
+const getLast30DaysStats = async () => {
+  const today = new Date();
+  const last30Days = new Date(today.setDate(today.getDate() - 30));
+
+  const stats = await StatsModel.find({
+    _id: { $gte: last30Days.toISOString().split("T")[0] },
+  });
+
+  const totalRequests = stats.reduce((sum, day) => sum + day.totalRequests, 0);
+
+  return totalRequests;
+};
+
+const getTodayStats = async () => {
+  const today = new Date().toISOString().split("T")[0];
+  const stats = await StatsModel.findOne({ _id: today });
+
+  if (!stats) return { totalRequests: 0, uniqueUsers: 0 };
+
+  return {
+    totalRequests: stats.totalRequests,
+    uniqueUsers: stats.uniqueUsers.length,
+  };
+};
+
 bot.on("text", async (ctx) => {
   if (ctx.msg.text == "/stats") {
     try {
       const users = await UserModel.countDocuments();
-      ctx.reply(`👤 <b>Users:</b> ${users}`, {
-        parse_mode: "HTML",
-      });
+      const { totalRequests, uniqueUsers } = await getTodayStats();
+      const last30DaysStats = await getLast30DaysStats();
+
+      ctx.reply(
+        `📊 Bot statistics\n\n👤 <b>All Users:</b> ${users}\n<b>Today's requests:</b> ${totalRequests}\n<b>Today's unique users:</b> ${uniqueUsers}\n<b>Last 30 day of requests:</b> ${last30DaysStats}`,
+        {
+          parse_mode: "HTML",
+        }
+      );
     } catch (err) {
       console.log(err, "Error with getting user data");
       ctx.reply("Something went wrong, please try again later");
@@ -96,6 +148,7 @@ bot.on("text", async (ctx) => {
     return ctx.reply("Invalid format ❌");
   } else {
     ctx.session.gitHubUser = ctx.msg.text;
+    await updateStatistics(ctx.from.id);
     return ctx.scene.enter("search");
   }
 });

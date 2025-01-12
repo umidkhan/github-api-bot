@@ -39,6 +39,9 @@ searchScene.enter(async (ctx) => {
             data.created_at
           }\n\n<i>Easily find GitHub users with </i><b>@github_username_bot</b>!`,
           parse_mode: "HTML",
+        },
+        {
+          reply_to_message_id: ctx.msg.message_id,
         }
       );
     });
