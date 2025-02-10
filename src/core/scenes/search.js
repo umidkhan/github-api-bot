@@ -5,7 +5,6 @@ const searchScene = new Scenes.BaseScene("search");
 const GitHubApi = "https://api.github.com/users/";
 
 searchScene.enter(async (ctx) => {
-  console.log("Entered to search scene");
 
   try {
     await axios.get(GitHubApi + ctx.session.gitHubUser).then(async (res) => {

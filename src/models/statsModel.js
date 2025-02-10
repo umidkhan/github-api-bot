@@ -12,6 +12,9 @@ const statsSchema = new mongoose.Schema({
     type: [String],
     default: [],
   },
+}, {
+  versionKey: false,
+  timestamps: true,
 });
 
 module.exports = mongoose.model("stats", statsSchema);
